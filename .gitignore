@@ -1,0 +1,9 @@
+*
+!libshijima
+!libshimejifinder
+!.gitignore
+!.gitmodules
+!bindings.cc
+!CMakeLists.txt
+!test.js
+!TODO

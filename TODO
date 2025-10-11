@@ -1,0 +1,5 @@
+This is EXTREMELY slow. One tick takes between 60-2000 ms.
+(Should take less than 40ms, ideally less than 1ms)
+
+Perhaps libshijima optimizations could fix this? Maybe precompiling
+scripts could help?
