@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    </head>
+    <body>
+        <div id="output"></div>
+        <script src="build/Shijima-Web.js"></script>
+        <script>
+            async function initShijima() {
+                try {
+                    const actions = await (await fetch("libshimejifinder/default_actions.xml")).text();
+                    const behaviors = await (await fetch("libshimejifinder/default_behaviors.xml")).text();
+                    const ctx = new Module.ScriptContext()
+                    document.getElementById("output").innerText = ctx.eval('(function(){return{"Hello":"world","1+1":1+1}})()') + "\n";
+                    const env = new Module.MascotEnvironment();
+                    const factory = new Module.MascotFactory(ctx, env);
+                    factory.registerTemplate("default", "/", actions, behaviors);
+                    let init = new Module.MascotInitializer(100, 100, "Fall", false);
+                    let manager = factory.spawnAdam("default", init);
+
+                    const start = new Date();
+                    for (let i=0; i<100; ++i) {
+                        manager.tick100Times();
+                    }
+                    const duration = new Date() - start;
+                    document.getElementById("output").innerText += "Finished in " + duration + " ms";
+                }
+                catch (err) {
+                    document.getElementById("output").innerText = err.toString();
+                }
+            }
+            const waitInterval = setInterval(() => {
+                if (typeof Module?.ScriptContext === 'function') {
+                    clearInterval(waitInterval);
+                    initShijima();
+                }
+            }, 10);
+        </script>
+    </body>
+</html>

@@ -5,5 +5,4 @@
 !.gitmodules
 !bindings.cc
 !CMakeLists.txt
-!test.js
-!TODO
+!test.html
