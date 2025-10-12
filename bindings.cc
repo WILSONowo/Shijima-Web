@@ -163,12 +163,19 @@ void ext::setSubticks(int subticks) {
 }
 
 emscripten::val extractShimeji(std::string path) {
-    auto ar = shimejifinder::analyze(path);
-    filesystem::remove_all("/shimeji");
-    filesystem::create_directory("/shimeji");
-    ar->extract("/shimeji");
-    auto &shimeji = ar->shimejis();
-    return emscripten::val::array(shimeji.begin(), shimeji.end());
+    try {
+        if (filesystem::exists("/tmp/shimeji")) {
+            filesystem::remove_all("/tmp/shimeji");
+        }
+        filesystem::create_directory("/tmp/shimeji");
+        auto ar = shimejifinder::analyze(path);
+        ar->extract("/tmp/shimeji");
+        auto &shimeji = ar->shimejis();
+        return emscripten::val::array(shimeji.begin(), shimeji.end());
+    }
+    catch (std::runtime_error &err) {
+        return emscripten::val(err.what());
+    }
 }
 
 EMSCRIPTEN_BINDINGS(shijima_web) {

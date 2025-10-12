@@ -1,9 +1,23 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <style>
+            #file-drop {
+                background: #ccc;
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+                z-index: 999;
+                opacity: 0.5;
+                visibility: hidden;
+            }
+        </style>
     </head>
     <body>
         <pre id="output"></pre>
+        <div id="file-drop"></div>
         <script src="build/Shijima-Web.js"></script>
         <script src="wrapper.js"></script>
         <script src="main.js"></script>
