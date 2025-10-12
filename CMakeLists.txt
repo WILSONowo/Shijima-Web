@@ -20,6 +20,7 @@ set_target_properties(unarr PROPERTIES COMPILE_FLAGS "-DPpmd8_Construct=unarr_Pp
     -DPpmd8_DecodeSymbol=unarr_Ppmd8_DecodeSymbol")
 
 include_directories(libshijima)
+include_directories(libshimejifinder)
 
 add_executable(Shijima-Web bindings.cc)
 add_dependencies(Shijima-Web shijima shimejifinder)

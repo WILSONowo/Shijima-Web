@@ -1,5 +1,6 @@
 #include <emscripten/bind.h>
 #include <shijima/mascot/factory.hpp>
+#include <shimejifinder/analyze.hpp>
 #include <memory>
 
 using namespace std;
@@ -58,6 +59,8 @@ public:
     void setDragging(bool dragged);
     // MascotEnvironment.setSubticks()
     void setSubticks(int subticks);
+    // MascotEnvironment.setAllowsBreeding()
+    void setAllowsBreeding(bool allowsBreeding);
 };
 
 double ext::getX() { return ((mascot::manager *)this)->get_state()->anchor.x; }
@@ -144,6 +147,11 @@ void ext::endTick() {
     env.cursor.dx = env.cursor.dy = 0;
 }
 
+void ext::setAllowsBreeding(bool allowsBreeding) {
+    auto &env = *((mascot::environment *)this);
+    env.allows_breeding = allowsBreeding;
+}
+
 void ext::setDragging(bool dragging) {
     auto &manager = *((mascot::manager *)this);
     manager.get_state()->dragging = dragging;
@@ -152,6 +160,15 @@ void ext::setDragging(bool dragging) {
 void ext::setSubticks(int subticks) {
     auto &env = *((mascot::environment *)this);
     env.subtick_count = subticks;
+}
+
+emscripten::val extractShimeji(std::string path) {
+    auto ar = shimejifinder::analyze(path);
+    filesystem::remove_all("/shimeji");
+    filesystem::create_directory("/shimeji");
+    ar->extract("/shimeji");
+    auto &shimeji = ar->shimejis();
+    return emscripten::val::array(shimeji.begin(), shimeji.end());
 }
 
 EMSCRIPTEN_BINDINGS(shijima_web) {
@@ -166,6 +183,7 @@ EMSCRIPTEN_BINDINGS(shijima_web) {
         .function("moveMouse", f<mascot::environment>(&ext::moveMouse))
         .function("setViewport", f<mascot::environment>(&ext::setViewport))
         .function("setSubticks", f<mascot::environment>(&ext::setSubticks))
+        .function("setAllowsBreeding", f<mascot::environment>(&ext::setAllowsBreeding))
         ;
     class_<mascot::factory>("MascotFactory")
         .smart_ptr_constructor("MascotFactory", &constructMascotFactory,
@@ -191,4 +209,5 @@ EMSCRIPTEN_BINDINGS(shijima_web) {
         .function("getX", f<mascot::manager>(&ext::getX))
         .function("getY", f<mascot::manager>(&ext::getY))
         ;
+    emscripten::function("extractShimeji", &extractShimeji);
 }
