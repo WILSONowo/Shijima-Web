@@ -92,6 +92,11 @@ void ext::setViewport(double width, double height) {
 const drawinfo *ext::getDrawInfo(double imageWidth, double imageHeight) {
     static drawinfo info;
     auto &state = *((mascot::manager *)this)->get_state();
+    if (state.dead) {
+        info.width = 0;
+        info.height = 0;
+        return &info;
+    }
     if (state.looking_right) {
         info.x = state.anchor.x - imageWidth + state.active_frame.anchor.x;
     }
