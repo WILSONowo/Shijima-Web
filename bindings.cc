@@ -1,6 +1,7 @@
 #include <emscripten/bind.h>
 #include <shijima/mascot/factory.hpp>
 #include <shimejifinder/analyze.hpp>
+#include <shimejifinder/utils.hpp>
 #include <memory>
 
 using namespace std;
@@ -178,6 +179,10 @@ emscripten::val extractShimeji(std::string path) {
     }
 }
 
+std::string normalizeFilename(std::string filename) {
+    return shimejifinder::normalize_filename(filename);
+}
+
 EMSCRIPTEN_BINDINGS(shijima_web) {
     class_<scripting::context>("ScriptContext")
         .smart_ptr_constructor("ScriptContext", &make_shared<scripting::context>)
@@ -217,4 +222,5 @@ EMSCRIPTEN_BINDINGS(shijima_web) {
         .function("getY", f<mascot::manager>(&ext::getY))
         ;
     emscripten::function("extractShimeji", &extractShimeji);
+    emscripten::function("normalizeFilename", &normalizeFilename);
 }

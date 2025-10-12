@@ -1,8 +1,8 @@
 class Shimeji {
-    #img; #parent; #manager; #name;
+    #img; #parent; #manager;
 
     constructor(parent, name, manager) {
-        this.#name = name;
+        this.name = name;
         this.#parent = parent;
         this.#img = document.createElement("img");
         this.#img.style.position = "fixed";
@@ -37,7 +37,7 @@ class Shimeji {
             this.#img.src = "";
             return;
         }
-        this.#parent.loadImage(this.#name, imageName, (image)=>{
+        this.#parent.loadImage(this.name, imageName, (image)=>{
             const drawInfo = this.#manager.getDrawInfo(image.width, image.height);
             const x = drawInfo.getX(), y = drawInfo.getY(), width = drawInfo.getWidth(),
                 height = drawInfo.getHeight();
@@ -92,7 +92,16 @@ class ShijimaWeb {
         image.addEventListener("load", ()=>{
             cb(image);
         });
-        image.src = "shime/" + path;
+        try {
+            const normalized = Shijima.normalizeFilename(path);
+            const buf = Shijima.FS.readFile(`/tmp/shimeji/${shimejiName}.mascot/img/${normalized}`);
+            const blob = new Blob([buf]);
+            image.src = URL.createObjectURL(blob);
+        }
+        catch (err) {
+            console.error(err);
+            image.src = "data:image/png;base64,";
+        }
     }
 
     constructor() {
@@ -156,6 +165,16 @@ class ShijimaWeb {
 
     registerTemplate(name, path, actions, behaviors) {
         this.#factory.registerTemplate(name, path, actions, behaviors);
+    }
+
+    dismissAll(name) {
+        for (let i=this.mascots.length-1; i>=0; --i) {
+            if (this.mascots[i].name === name) {
+                this.mascots[i].delete();
+                this.mascots.splice(i, 1);
+            }
+        }
+        this.#images.delete(name);
     }
 
     delete() {

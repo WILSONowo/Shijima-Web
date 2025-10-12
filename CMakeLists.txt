@@ -9,6 +9,13 @@ set(SHIMEJIFINDER_USE_ICONV YES)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXECUTABLE_SUFFIX ".js")
 
+set(ZLIB_BUILD_TESTING OFF)
+set(ZLIB_BUILD_SHARED OFF)
+set(ZLIB_INSTALL OFF)
+add_subdirectory(zlib)
+
+set(ZLIB_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/zlib)
+set(ZLIB_LIBRARY ${CMAKE_BINARY_DIR}/zlib/libz.a)
 add_subdirectory(libshimejifinder)
 
 add_subdirectory(libshijima)
@@ -26,6 +33,9 @@ add_executable(Shijima-Web bindings.cc)
 add_dependencies(Shijima-Web shijima shimejifinder)
 target_link_libraries(Shijima-Web shijima shimejifinder embind)
 
+#FIXME: libz is linked twice by both libunarr and libarchive
+#       -z muldefs is a workaround
 set_target_properties(Shijima-Web PROPERTIES LINK_FLAGS "-s WASM=1 -s MAIN_MODULE=1 \
     -s STANDALONE_WASM -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s EXPORT_NAME=createShijima -s MODULARIZE=1 \
-    -s FORCE_FILESYSTEM -s EXPORTED_RUNTIME_METHODS=[\"FS\"] -s WASMFS=1 -fPIC -fexceptions --no-entry ")
+    -s FORCE_FILESYSTEM -s EXPORTED_RUNTIME_METHODS=[\"FS\"] -s WASMFS=1 -fPIC -fexceptions --no-entry \
+    -z muldefs ")
