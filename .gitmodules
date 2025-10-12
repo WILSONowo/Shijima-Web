@@ -4,3 +4,6 @@
 [submodule "libshijima"]
 	path = libshijima
 	url = git@github.com:pixelomer/libshijima
+[submodule "zlib"]
+	path = zlib
+	url = https://github.com/madler/zlib
