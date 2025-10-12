@@ -27,4 +27,4 @@ target_link_libraries(Shijima-Web shijima shimejifinder embind)
 
 set_target_properties(Shijima-Web PROPERTIES LINK_FLAGS "-s WASM=1 -s MAIN_MODULE=1 \
     -s STANDALONE_WASM -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s EXPORT_NAME=createShijima -s MODULARIZE=1 \
-    --no-entry ")
+    -s FORCE_FILESYSTEM -s EXPORTED_RUNTIME_METHODS=[\"FS\"] -lidbfs.js -lproxyfs.js --no-entry ")
