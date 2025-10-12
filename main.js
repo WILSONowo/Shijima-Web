@@ -17,8 +17,14 @@ ShijimaWeb.load().then(async() => {
     fileDrop.ondrop = async(e)=>{
         e.preventDefault();
         for (const file of e.dataTransfer.files) {
-            console.log(file);
-            Shijima.FS.writeFile("/tmp/archive.bin", await file.bytes());
+            let bytes = await file.bytes();
+            const fd = Shijima.FS.open("/tmp/archive.bin", "w");
+            for (let i=0, chunk=1024*1024; i<bytes.length; i += chunk) {
+                const subBytes = bytes.subarray(i, Math.min(i+chunk, bytes.length));
+                Shijima.FS.write(fd, subBytes, 0, subBytes.length);
+            }
+            Shijima.FS.close(fd);
+            bytes = null;
             const imported = Shijima.extractShimeji("/tmp/archive.bin");
             Shijima.FS.unlink("/tmp/archive.bin");
             if (Array.isArray(imported)) {

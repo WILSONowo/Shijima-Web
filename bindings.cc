@@ -62,6 +62,8 @@ public:
     void setSubticks(int subticks);
     // MascotEnvironment.setAllowsBreeding()
     void setAllowsBreeding(bool allowsBreeding);
+    // MascotFactory.hasTemplate()
+    bool hasTemplate(std::string name);
 };
 
 double ext::getX() { return ((mascot::manager *)this)->get_state()->anchor.x; }
@@ -170,10 +172,9 @@ void ext::setSubticks(int subticks) {
 
 emscripten::val extractShimeji(std::string path) {
     try {
-        if (filesystem::exists("/tmp/shimeji")) {
-            filesystem::remove_all("/tmp/shimeji");
+        if (!filesystem::exists("/tmp/shimeji")) {
+            filesystem::create_directory("/tmp/shimeji");
         }
-        filesystem::create_directory("/tmp/shimeji");
         auto ar = shimejifinder::analyze(path);
         ar->extract("/tmp/shimeji");
         auto &shimeji = ar->shimejis();
@@ -186,6 +187,11 @@ emscripten::val extractShimeji(std::string path) {
 
 std::string normalizeFilename(std::string filename) {
     return shimejifinder::normalize_filename(filename);
+}
+
+bool ext::hasTemplate(std::string name) {
+    auto &factory = *((mascot::factory *)this);
+    return factory.get_template(name) != nullptr;
 }
 
 EMSCRIPTEN_BINDINGS(shijima_web) {
@@ -206,6 +212,8 @@ EMSCRIPTEN_BINDINGS(shijima_web) {
         .smart_ptr_constructor("MascotFactory", &constructMascotFactory,
             allow_raw_pointers())
         .function("registerTemplate", f<mascot::factory>(&ext::registerTemplate))
+        .function("hasTemplate", f<mascot::factory>(&ext::hasTemplate))
+        .function("deregisterTemplate", &mascot::factory::deregister_template)
         .function("spawnAdam", f<mascot::factory>(&ext::spawnAdam),
             allow_raw_pointers())
         ;

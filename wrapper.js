@@ -164,6 +164,10 @@ class ShijimaWeb {
     }
 
     registerTemplate(name, path, actions, behaviors) {
+        if (this.#factory.hasTemplate(name)) {
+            this.dismissAll(name);
+            this.#factory.deregisterTemplate(name);
+        }
         this.#factory.registerTemplate(name, path, actions, behaviors);
     }
 
