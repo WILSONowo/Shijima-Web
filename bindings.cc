@@ -11,17 +11,43 @@ auto f(TRet(TFake::*fake)(Args...)) {
     return (TRet(TReal::*)(Args...))fake;
 }
 
+class ext;
+
+class drawinfo {
+public:
+    friend class ext;
+    double getX() const { return x; }
+    double getY() const { return y; }
+    double getWidth() const { return width; }
+    double getHeight() const { return height; }
+    bool getMirrored() const { return mirrored; }
+private:
+    double x, y, width, height;
+    bool mirrored;
+};
+
 class ext {
 public:
+    // MascotFactory.registerTemplate()
     void registerTemplate(
         string const& name,
         string const& path, string const& actionsXML,
         string const& behaviorsXML);
-    mascot::manager *spawnAdam(string const& name,
-        shared_ptr<mascot::manager::initializer> init);
-    void tick100Times();
+    // MascotFactory.spawnAdam()
+    mascot::manager *spawnAdam(string const& name, double x, double y,
+        string const& behavior, bool looking_right);
+    // MascotEnvironment.setViewport()
+    void setViewport(double width, double height);
+    // MascotManager.getX()
     double getX();
+    // MascotManager.getY()
     double getY();
+    // MascotManager.getDrawInfo()
+    const drawinfo *getDrawInfo(double imageWidth, double imageHeight);
+    // MascotManager.getDrawInfo()
+    std::string getImageName();
+    // MascotManager.getActiveBehavior()
+    std::string getActiveBehavior();
 };
 
 double ext::getX() { return ((mascot::manager *)this)->get_state()->anchor.x; }
@@ -41,14 +67,33 @@ void ext::registerTemplate(
     factory.register_template(tmpl);
 }
 
-shared_ptr<mascot::manager::initializer> constructMascotInitializer(double x,
-    double y, string const& behavior, bool looking_right)
-{
-    auto init = make_shared<mascot::manager::initializer>();
-    init->anchor = { x, y };
-    init->behavior = behavior;
-    init->looking_right = looking_right;
-    return init;
+void ext::setViewport(double width, double height) {
+    auto &env = *(mascot::environment *)this;
+    env.screen = { 0, width, height, 0 };
+    env.work_area = { 0, width, height, 0 };
+    env.floor = { height, 0, width };
+    env.ceiling = { 0, 0, width };
+}
+
+const drawinfo *ext::getDrawInfo(double imageWidth, double imageHeight) {
+    static drawinfo info;
+    auto &state = *((mascot::manager *)this)->get_state();
+    if (state.looking_right) {
+        info.x = state.anchor.x - imageWidth + state.active_frame.anchor.x;
+    }
+    else {
+        info.x = state.anchor.x - state.active_frame.anchor.x;
+    }
+    info.y = state.anchor.y - state.active_frame.anchor.y;
+    info.width = imageWidth;
+    info.height = imageHeight;
+    info.mirrored = state.active_frame.right_name.empty() && state.looking_right;
+    return &info;
+}
+
+std::string ext::getImageName() {
+    auto &state = *((mascot::manager *)this)->get_state();
+    return state.active_frame.get_name(state.looking_right);
 }
 
 shared_ptr<mascot::factory> constructMascotFactory(shared_ptr<scripting::context> ctx,
@@ -60,19 +105,19 @@ shared_ptr<mascot::factory> constructMascotFactory(shared_ptr<scripting::context
     return factory;
 }
 
-mascot::manager *ext::spawnAdam(string const& name,
-    shared_ptr<mascot::manager::initializer> init)
+mascot::manager *ext::spawnAdam(string const& name, double x, double y,
+    string const& behavior, bool looking_right)
 {
     auto &factory = *(mascot::factory *)this;
-    auto product = factory.spawn(name, (init == nullptr) ?
-        mascot::manager::initializer{} : *init);
+    mascot::manager::initializer init { { x, y }, behavior, looking_right };
+    auto product = factory.spawn(name, init);
     return product.manager.release();
 }
 
-void ext::tick100Times() {
-    for (int i=0; i<100; ++i) {
-        ((mascot::manager *)this)->tick();
-    }
+std::string ext::getActiveBehavior() {
+    auto &manager = *((mascot::manager *)this);
+    auto behavior = manager.active_behavior();
+    return (behavior == nullptr) ? "" : behavior->name;
 }
 
 EMSCRIPTEN_BINDINGS(shijima_web) {
@@ -82,10 +127,7 @@ EMSCRIPTEN_BINDINGS(shijima_web) {
         ;
     class_<mascot::environment>("MascotEnvironment")
         .smart_ptr_constructor("MascotEnvironment", &make_shared<mascot::environment>)
-        ;
-    class_<mascot::manager::initializer>("MascotInitializer")
-        .smart_ptr_constructor("MascotInitializer", &constructMascotInitializer,
-            allow_raw_pointers())
+        .function("setViewport", f<mascot::environment>(&ext::setViewport))
         ;
     class_<mascot::factory>("MascotFactory")
         .smart_ptr_constructor("MascotFactory", &constructMascotFactory,
@@ -94,9 +136,19 @@ EMSCRIPTEN_BINDINGS(shijima_web) {
         .function("spawnAdam", f<mascot::factory>(&ext::spawnAdam),
             allow_raw_pointers())
         ;
+    class_<drawinfo>("MascotDrawInfo")
+        .function("getX", &drawinfo::getX)
+        .function("getY", &drawinfo::getY)
+        .function("getWidth", &drawinfo::getWidth)
+        .function("getHeight", &drawinfo::getHeight)
+        .function("getMirrored", &drawinfo::getMirrored)
+        ;
     class_<mascot::manager>("MascotManager")
         .function("tick", &mascot::manager::tick)
-        .function("tick100Times", f<mascot::manager>(&ext::tick100Times))
+        .function("getActiveBehavior", f<mascot::manager>(&ext::getActiveBehavior))
+        .function("getImageName", f<mascot::manager>(&ext::getImageName))
+        .function("getDrawInfo", f<mascot::manager>(&ext::getDrawInfo),
+            allow_raw_pointers())
         .function("getX", f<mascot::manager>(&ext::getX))
         .function("getY", f<mascot::manager>(&ext::getY))
         ;

@@ -1,40 +1,87 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <style>
+            #mascot {
+                position: absolute;
+            }
+            .flipped {
+                transform: scaleX(-1);
+                -webkit-transform: scaleX(-1);
+            }
+        </style>
     </head>
     <body>
-        <div id="output"></div>
+        <pre id="output"></pre>
+        <img id="mascot">
         <script src="build/Shijima-Web.js"></script>
         <script>
             async function initShijima() {
                 try {
                     const actions = await (await fetch("libshimejifinder/default_actions.xml")).text();
                     const behaviors = await (await fetch("libshimejifinder/default_behaviors.xml")).text();
-                    const ctx = new Module.ScriptContext()
+                    globalThis.Shijima = await createShijima();
+                    const ctx = new Shijima.ScriptContext();
                     document.getElementById("output").innerText = ctx.eval('(function(){return{"Hello":"world","1+1":1+1}})()') + "\n";
-                    const env = new Module.MascotEnvironment();
-                    const factory = new Module.MascotFactory(ctx, env);
+                    const env = new Shijima.MascotEnvironment();
+                    const factory = new Shijima.MascotFactory(ctx, env);
                     factory.registerTemplate("default", "/", actions, behaviors);
-                    let init = new Module.MascotInitializer(100, 100, "Fall", false);
-                    let manager = factory.spawnAdam("default", init);
+                    let manager = factory.spawnAdam("default", 100, 100, "Fall", false);
 
-                    const start = new Date();
-                    for (let i=0; i<100; ++i) {
-                        manager.tick100Times();
-                    }
-                    const duration = new Date() - start;
-                    document.getElementById("output").innerText += "Finished in " + duration + " ms";
+                    const images = {};
+                    const img = document.getElementById("mascot");
+                    const drawImage = (image) => {
+                        const drawInfo = manager.getDrawInfo(image.width, image.height);
+                        img.src = image.src;
+                        img.style.left = `${drawInfo.getX()}px`;
+                        img.style.top = `${drawInfo.getY()}px`;
+                        img.style.width = `${drawInfo.getWidth()}px`;
+                        img.style.height = `${drawInfo.getHeight()}px`;
+                        if (drawInfo.getMirrored()) {
+                            img.classList.add("flipped");
+                        }
+                        else {
+                            img.classList.remove("flipped");
+                        }
+                    };
+                    setInterval(() => {
+                        const start = new Date();
+                        const width = document.documentElement.clientWidth;
+                        const height = document.documentElement.clientHeight;
+                        env.setViewport(width, height);
+                        manager.tick();
+                        const duration = new Date() - start;
+                        const imageName = manager.getImageName();
+                        if (imageName === "") {
+                            img.src = "";
+                        }
+                        else {
+                            let loadedImage = images[imageName];
+                            if (loadedImage == null) {
+                                loadedImage = new Image();
+                                loadedImage.onload = ()=>{
+                                    if (manager.getImageName() === imageName) {
+                                        drawImage(loadedImage);
+                                    }
+                                };
+                                loadedImage.src = "shime/" + imageName;
+                            }
+                            else if (loadedImage.complete) {
+                                drawImage(loadedImage);
+                            }
+                        }
+                        document.getElementById("output").innerHTML = "Tick finished in " + duration + " ms\n" +
+                            `behavior: ${manager.getActiveBehavior()}\n` +
+                            `image: ${manager.getImageName()}\n` +
+                            `(screen) width: ${width}, height: ${height}\n` +
+                            `(anchor) x: ${manager.getX()}, y: ${manager.getY()}`;
+                    }, 40);
                 }
                 catch (err) {
                     document.getElementById("output").innerText = err.toString();
                 }
             }
-            const waitInterval = setInterval(() => {
-                if (typeof Module?.ScriptContext === 'function') {
-                    clearInterval(waitInterval);
-                    initShijima();
-                }
-            }, 10);
+            initShijima();
         </script>
     </body>
 </html>
