@@ -1,111 +1,195 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <style>
-            #mascot {
-                position: absolute;
-                overflow: hidden;
-            }
-            .flipped {
-                transform: scaleX(-1);
-                -webkit-transform: scaleX(-1);
-            }
-        </style>
     </head>
     <body>
         <pre id="output"></pre>
-        <img id="mascot">
         <script src="build/Shijima-Web.js"></script>
         <script>
-            async function initShijima() {
-                try {
-                    const actions = await (await fetch("libshimejifinder/default_actions.xml")).text();
-                    const behaviors = await (await fetch("libshimejifinder/default_behaviors.xml")).text();
-                    globalThis.Shijima = await createShijima();
-                    const ctx = new Shijima.ScriptContext();
-                    document.getElementById("output").innerText = ctx.eval('(function(){return{"Hello":"world","1+1":1+1}})()') + "\n";
-                    const env = new Shijima.MascotEnvironment();
-                    env.setSubticks(2);
-                    const factory = new Shijima.MascotFactory(ctx, env);
-                    factory.registerTemplate("default", "/", actions, behaviors);
-                    let manager = factory.spawnAdam("default", 100, 100, "Fall", false);
+            class Shimeji {
+                #img; #parent; #manager; #name;
 
-                    const images = {};
-                    const img = document.getElementById("mascot");
-                    let draggedManager = null;
-                    let mouseX = 0, mouseY = 0;
-                    img.onmousedown = () => {
-                        draggedManager = manager;
-                        manager.setDragging(true);
+                constructor(parent, name, manager) {
+                    this.#name = name;
+                    this.#parent = parent;
+                    this.#img = document.createElement("img");
+                    this.#img.style.position = "fixed";
+                    this.#manager = manager;
+                    document.body.appendChild(this.#img);
+
+                    this.#img.onmousedown = () => {
+                        this.#parent.setDraggedShimeji(this);
+                        this.#manager.setDragging(true);
                         return false;
                     };
-                    img.onmouseup = () => {
-                        draggedManager?.setDragging(false);
-                        draggedManager = null;
+                    this.#img.onmouseup = () => {
+                        this.#parent.releaseDraggedShimeji();
                         return false;
                     };
-                    const drawImage = (image) => {
-                        const drawInfo = manager.getDrawInfo(image.width, image.height);
-                        img.src = image.src;
-                        img.style.left = `${drawInfo.getX()}px`;
-                        img.style.top = `${drawInfo.getY()}px`;
-                        img.style.width = `${drawInfo.getWidth()}px`;
-                        img.style.height = `${drawInfo.getHeight()}px`;
+                }
+
+                stopDragging() {
+                    this.#manager.setDragging(false);
+                }
+
+                tick() {
+                    this.#manager.tick();
+
+                    const imageName = this.#manager.getImageName();
+                    if (imageName === "") {
+                        this.#img.src = "";
+                        return;
+                    }
+                    this.#parent.loadImage(this.#name, imageName, (image)=>{
+                        const drawInfo = this.#manager.getDrawInfo(image.width, image.height);
+                        const x = drawInfo.getX(), y = drawInfo.getY(), width = drawInfo.getWidth(),
+                            height = drawInfo.getHeight();
+                        this.#img.src = image.src;
+                        this.#img.style.left = `${x}px`;
+                        this.#img.style.top = `${y}px`;
+                        this.#img.style.width = `${width}px`;
+                        this.#img.style.height = `${height}px`;
                         if (drawInfo.getMirrored()) {
-                            img.classList.add("flipped");
+                            this.#img.style["transform"] = "scaleX(-1)";
+                            this.#img.style["-webkit-transform"] = "scaleX(-1)";
                         }
                         else {
-                            img.classList.remove("flipped");
+                            this.#img.style["transform"] = "none";
+                            this.#img.style["-webkit-transform"] = "none";
                         }
-                    };
-                    document.onmouseup = (ev) => {
-                        draggedManager?.setDragging(false);
-                        draggedManager = null;
-                    };
-                    document.onmousemove = (ev) => {
-                        env.moveMouse(mouseX = ev.clientX, mouseY = ev.clientY);
-                    };
-                    setInterval(() => {
-                        const start = new Date();
-                        const width = document.documentElement.clientWidth;
-                        const height = document.documentElement.clientHeight;
-                        env.setViewport(width, height);
-                        env.startTick();
-                        manager.tick();
-                        env.endTick();
-                        const duration = new Date() - start;
-                        const imageName = manager.getImageName();
-                        if (imageName === "") {
-                            img.src = "";
+                    });
+                }
+
+                delete() {
+                    this.#img.remove();
+                    this.#manager.delete();
+                }
+            };
+            class ShijimaWeb {
+                #ctx; #env; #factory; #images;
+                #onmouseup; #onmousemove; #draggedShimeji;
+
+                static async load() {
+                    globalThis.Shijima = await createShijima();
+                }
+
+                loadImage(shimejiName, path, cb) {
+                    let image = this.#images.get(shimejiName)?.get(path);
+                    if (image != null) {
+                        if (image.complete) {
+                            cb(image);
                         }
                         else {
-                            let loadedImage = images[imageName];
-                            if (loadedImage == null) {
-                                loadedImage = new Image();
-                                loadedImage.onload = ()=>{
-                                    if (manager.getImageName() === imageName) {
-                                        drawImage(loadedImage);
-                                    }
-                                };
-                                loadedImage.src = "shime/" + imageName;
-                            }
-                            else if (loadedImage.complete) {
-                                drawImage(loadedImage);
-                            }
+                            image.addEventListener("load", ()=>{
+                                cb(image);
+                            });
                         }
-                        document.getElementById("output").innerHTML = "Tick finished in " + duration + " ms\n" +
-                            `behavior: ${manager.getActiveBehavior()}\n` +
-                            `image: ${manager.getImageName()}\n` +
-                            `(mouse)  x: ${mouseX}, y: ${mouseY}\n` +
-                            `(screen) width: ${width}, height: ${height}\n` +
-                            `(anchor) x: ${manager.getX()}, y: ${manager.getY()}`;
-                    }, 20);
+                        return;
+                    }
+                    if (!this.#images.has(shimejiName)) {
+                        this.#images.set(shimejiName, new Map());
+                    }
+                    image = new Image();
+                    this.#images.get(shimejiName).set(path, image);
+                    image.addEventListener("load", ()=>{
+                        cb(image);
+                    });
+                    image.src = "shime/" + path;
                 }
-                catch (err) {
-                    document.getElementById("output").innerText = err.toString();
+
+                constructor() {
+                    this.#ctx = new Shijima.ScriptContext();
+                    this.#env = new Shijima.MascotEnvironment();
+                    this.#env.setSubticks(2);
+                    this.#factory = new Shijima.MascotFactory(this.#ctx, this.#env);
+                    this.#images = new Map();
+                    this.#draggedShimeji = null;
+                    this.mascots = [];
+                    
+                    this.#onmousemove = (ev) => {
+                        this.#env.moveMouse(ev.clientX, ev.clientY);
+                    }
+                    this.#onmouseup = (ev) => {
+                        this.releaseDraggedShimeji();
+                    };
+                    document.addEventListener("mousemove", this.#onmousemove);
+                    document.addEventListener("mouseup", this.#onmouseup);
+                    this.#updateEnvironment();
                 }
-            }
-            initShijima();
+
+                #updateEnvironment() {
+                    const width = document.documentElement.clientWidth;
+                    const height = document.documentElement.clientHeight;
+                    this.#env.setViewport(this.width = width, this.height = height);
+                    return { width, height };
+                }
+                
+                spawn(name) {
+                    const { width, height } = this.#updateEnvironment();
+                    const x = (width > 100) ? (50 + Math.random() * (width - 100)) : 50;
+                    const y = (height > 100) ? (50 + Math.random() * (height - 100)) : 50;
+                    const adam = this.#factory.spawnAdam(name, x, y, "Fall", Math.random() > 0.5);
+                    const shimeji = new Shimeji(this, name, adam);
+                    this.mascots.push(shimeji);
+                    return shimeji;
+                }
+
+                tick() {
+                    this.#updateEnvironment();
+                    this.#env.startTick();
+                    for (const shimeji of this.mascots) {
+                        shimeji.tick();
+                    }
+                    this.#env.endTick();
+                }
+
+                releaseDraggedShimeji() {
+                    if (this.#draggedShimeji != null) {
+                        this.#draggedShimeji.stopDragging();
+                    }
+                    this.#draggedShimeji = null;
+                }
+
+                setDraggedShimeji(shimeji) {
+                    this.releaseDraggedShimeji();
+                    this.#draggedShimeji = shimeji;
+                }
+
+                registerTemplate(name, path, actions, behaviors) {
+                    this.#factory.registerTemplate("default", "/", actions, behaviors);
+                }
+
+                delete() {
+                    for (const shimeji of this.mascots) {
+                        shimeji.delete();
+                    }
+                    this.mascots = null;
+                    this.#factory.delete();
+                    this.#factory = null;
+                    this.#env.delete();
+                    this.#env = null;
+                    this.#ctx.delete();
+                    this.#ctx = null;
+                    document.removeEventListener("mousemove", this.#onmousemove);
+                    this.#onmousemove = null;
+                    document.removeEventListener("mouseup", this.#onmouseup);
+                    this.#onmouseup = null;
+                }
+            };
+            ShijimaWeb.load().then(async() => {
+                const shijima = new ShijimaWeb();
+                const actions = await (await fetch("libshimejifinder/default_actions.xml")).text();
+                const behaviors = await (await fetch("libshimejifinder/default_behaviors.xml")).text();
+                shijima.registerTemplate("default", "@", actions, behaviors);
+                shijima.spawn("default");
+                shijima.spawn("default");
+                shijima.spawn("default");
+                shijima.spawn("default");
+                shijima.spawn("default");
+                setInterval(() => {
+                    shijima.tick();
+                }, 20);
+            });
         </script>
     </body>
 </html>
