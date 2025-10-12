@@ -4,6 +4,7 @@
         <style>
             #mascot {
                 position: absolute;
+                overflow: hidden;
             }
             .flipped {
                 transform: scaleX(-1);
@@ -24,12 +25,25 @@
                     const ctx = new Shijima.ScriptContext();
                     document.getElementById("output").innerText = ctx.eval('(function(){return{"Hello":"world","1+1":1+1}})()') + "\n";
                     const env = new Shijima.MascotEnvironment();
+                    env.setSubticks(2);
                     const factory = new Shijima.MascotFactory(ctx, env);
                     factory.registerTemplate("default", "/", actions, behaviors);
                     let manager = factory.spawnAdam("default", 100, 100, "Fall", false);
 
                     const images = {};
                     const img = document.getElementById("mascot");
+                    let draggedManager = null;
+                    let mouseX = 0, mouseY = 0;
+                    img.onmousedown = () => {
+                        draggedManager = manager;
+                        manager.setDragging(true);
+                        return false;
+                    };
+                    img.onmouseup = () => {
+                        draggedManager?.setDragging(false);
+                        draggedManager = null;
+                        return false;
+                    };
                     const drawImage = (image) => {
                         const drawInfo = manager.getDrawInfo(image.width, image.height);
                         img.src = image.src;
@@ -44,12 +58,21 @@
                             img.classList.remove("flipped");
                         }
                     };
+                    document.onmouseup = (ev) => {
+                        draggedManager?.setDragging(false);
+                        draggedManager = null;
+                    };
+                    document.onmousemove = (ev) => {
+                        env.moveMouse(mouseX = ev.clientX, mouseY = ev.clientY);
+                    };
                     setInterval(() => {
                         const start = new Date();
                         const width = document.documentElement.clientWidth;
                         const height = document.documentElement.clientHeight;
                         env.setViewport(width, height);
+                        env.startTick();
                         manager.tick();
+                        env.endTick();
                         const duration = new Date() - start;
                         const imageName = manager.getImageName();
                         if (imageName === "") {
@@ -73,9 +96,10 @@
                         document.getElementById("output").innerHTML = "Tick finished in " + duration + " ms\n" +
                             `behavior: ${manager.getActiveBehavior()}\n` +
                             `image: ${manager.getImageName()}\n` +
+                            `(mouse)  x: ${mouseX}, y: ${mouseY}\n` +
                             `(screen) width: ${width}, height: ${height}\n` +
                             `(anchor) x: ${manager.getX()}, y: ${manager.getY()}`;
-                    }, 40);
+                    }, 20);
                 }
                 catch (err) {
                     document.getElementById("output").innerText = err.toString();

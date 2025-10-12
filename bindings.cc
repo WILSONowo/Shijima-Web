@@ -48,6 +48,16 @@ public:
     std::string getImageName();
     // MascotManager.getActiveBehavior()
     std::string getActiveBehavior();
+    // MascotEnvironment.startTick()
+    void startTick();
+    // MascotEnvironment.moveMouse()
+    void moveMouse(double x, double y);
+    // MascotEnvironment.endTick()
+    void endTick();
+    // MascotManager.setDragging()
+    void setDragging(bool dragged);
+    // MascotEnvironment.setSubticks()
+    void setSubticks(int subticks);
 };
 
 double ext::getX() { return ((mascot::manager *)this)->get_state()->anchor.x; }
@@ -120,6 +130,30 @@ std::string ext::getActiveBehavior() {
     return (behavior == nullptr) ? "" : behavior->name;
 }
 
+void ext::moveMouse(double x, double y) {
+    auto &env = *((mascot::environment *)this);
+    env.cursor.move({ x, y });
+}
+
+void ext::startTick() {
+
+}
+
+void ext::endTick() {
+    auto &env = *((mascot::environment *)this);
+    env.cursor.dx = env.cursor.dy = 0;
+}
+
+void ext::setDragging(bool dragging) {
+    auto &manager = *((mascot::manager *)this);
+    manager.get_state()->dragging = dragging;
+}
+
+void ext::setSubticks(int subticks) {
+    auto &env = *((mascot::environment *)this);
+    env.subtick_count = subticks;
+}
+
 EMSCRIPTEN_BINDINGS(shijima_web) {
     class_<scripting::context>("ScriptContext")
         .smart_ptr_constructor("ScriptContext", &make_shared<scripting::context>)
@@ -127,7 +161,11 @@ EMSCRIPTEN_BINDINGS(shijima_web) {
         ;
     class_<mascot::environment>("MascotEnvironment")
         .smart_ptr_constructor("MascotEnvironment", &make_shared<mascot::environment>)
+        .function("startTick", f<mascot::environment>(&ext::startTick))
+        .function("endTick", f<mascot::environment>(&ext::endTick))
+        .function("moveMouse", f<mascot::environment>(&ext::moveMouse))
         .function("setViewport", f<mascot::environment>(&ext::setViewport))
+        .function("setSubticks", f<mascot::environment>(&ext::setSubticks))
         ;
     class_<mascot::factory>("MascotFactory")
         .smart_ptr_constructor("MascotFactory", &constructMascotFactory,
@@ -149,6 +187,7 @@ EMSCRIPTEN_BINDINGS(shijima_web) {
         .function("getImageName", f<mascot::manager>(&ext::getImageName))
         .function("getDrawInfo", f<mascot::manager>(&ext::getDrawInfo),
             allow_raw_pointers())
+        .function("setDragging", f<mascot::manager>(&ext::setDragging))
         .function("getX", f<mascot::manager>(&ext::getX))
         .function("getY", f<mascot::manager>(&ext::getY))
         ;
