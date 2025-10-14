@@ -9,3 +9,6 @@
 !main.js
 !wrapper.js
 !zlib
+!.github/
+!.github/workflows/
+!.github/workflows/build.yml
