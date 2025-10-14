@@ -21,5 +21,5 @@ jobs:
     - name: Build
       run: |
         source ./emsdk/emsdk_env.sh
-        cmake -DCMAKE_BUILD_TYPE=Release -Bbuild
+        emcmake cmake -DCMAKE_BUILD_TYPE=Release -Bbuild
         make -Cbuild -j`nproc`
