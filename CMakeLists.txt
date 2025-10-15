@@ -14,6 +14,8 @@ set(ZLIB_BUILD_SHARED OFF)
 set(ZLIB_INSTALL OFF)
 add_subdirectory(zlib)
 
+set(ENABLE_ZLIB TRUE)
+set(ZLIB_FOUND TRUE)
 set(ZLIB_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/zlib)
 set(ZLIB_LIBRARY ${CMAKE_BINARY_DIR}/zlib/libz.a)
 add_subdirectory(libshimejifinder)
