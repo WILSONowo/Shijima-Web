@@ -13,3 +13,5 @@
 !.github/
 !.github/workflows/
 !.github/workflows/build.yml
+!README.md
+!LICENSE
