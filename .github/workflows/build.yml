@@ -25,8 +25,7 @@ jobs:
     - name: Build
       run: |
         source ./emsdk/emsdk_env.sh
-        emcmake cmake -DCMAKE_BUILD_TYPE=Release -Bbuild
-        make -Cbuild -j`nproc`
+        ./build.sh
     - name: Prepare for distribution
       run: ./pack.sh
     - name: Archive
