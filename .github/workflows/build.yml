@@ -15,15 +15,22 @@ jobs:
       run: |
         npm i -g uglify-js
         type uglifyjs
+    - name: Restore Emscripten
+      id: restore-emscripten
+      uses: actions/cache@v4
+      with:
+        path: emsdk
+        key: ${{ runner.os }}-emscripten-4.0.16
     - name: Install Emscripten
+      if: steps.restore-emscripten.outputs.cache-hit != 'true'
       run: |
         git clone https://github.com/emscripten-core/emsdk.git
         cd emsdk
         ./emsdk install 4.0.16
-        ./emsdk activate 4.0.16
         cd ..
     - name: Build
       run: |
+        ./emsdk/emsdk activate 4.0.16
         source ./emsdk/emsdk_env.sh
         ./build.sh
     - name: Prepare for distribution
