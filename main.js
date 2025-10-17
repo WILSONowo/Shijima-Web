@@ -51,17 +51,19 @@ ShijimaWeb.load().then(async() => {
             importBytes(bytes);
         }
     })().catch((err) => console.error(err));
-    let acc = 0, count = 0;
-    setInterval(() => {
-        const date = new Date();
-        shijima.tick();
-        const elapsed = new Date() - date;
-        acc += elapsed;
-        count++;
-        if (count === 20) {
-            document.getElementById("output").innerText = "Tick (avg): " +
-                (acc / count).toFixed(2) + " ms / 20 ms";
-            acc = count = 0;
+
+    //FIXME: this feels wrong
+    let last = performance.now();
+    let remaining = 0;
+    const tick = () => {
+        const start = performance.now();
+        const offset = start - last;
+        remaining += offset;
+        while (remaining > 20) {
+            remaining -= 20;
+            shijima.tick();
         }
-    }, 20);
+        last = performance.now();
+    };
+    setInterval(tick, 20);
 });
