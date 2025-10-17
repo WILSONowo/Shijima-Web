@@ -14,12 +14,13 @@ class Shimeji {
         this.#manager = manager;
         document.body.appendChild(this.#img);
 
-        this.#img.onmousedown = () => {
+        this.#img.onpointerdown = (ev) => {
+            this.#parent.moveMouse(ev.clientX, ev.clientY);
             this.#parent.setDraggedShimeji(this);
             this.#manager.setDragging(true);
             return false;
         };
-        this.#img.onmouseup = () => {
+        this.#img.onpointerup = () => {
             this.#parent.releaseDraggedShimeji();
             return false;
         };
@@ -65,7 +66,7 @@ class Shimeji {
 
 class ShijimaWeb {
     #ctx; #env; #factory; #images;
-    #onmouseup; #onmousemove; #draggedShimeji;
+    #onpointerup; #onpointermove; #draggedShimeji;
 
     static async load() {
         globalThis.Shijima = await createShijima();
@@ -104,6 +105,10 @@ class ShijimaWeb {
         }
     }
 
+    moveMouse(x, y) {
+        this.#env.moveMouse(x, y);
+    }
+
     constructor() {
         this.#ctx = new Shijima.ScriptContext();
         this.#env = new Shijima.MascotEnvironment();
@@ -114,14 +119,14 @@ class ShijimaWeb {
         this.#draggedShimeji = null;
         this.mascots = [];
         
-        this.#onmousemove = (ev) => {
-            this.#env.moveMouse(ev.clientX, ev.clientY);
+        this.#onpointermove = (ev) => {
+            this.moveMouse(ev.clientX, ev.clientY);
         }
-        this.#onmouseup = (ev) => {
+        this.#onpointerup = (ev) => {
             this.releaseDraggedShimeji();
         };
-        document.addEventListener("mousemove", this.#onmousemove);
-        document.addEventListener("mouseup", this.#onmouseup);
+        document.addEventListener("pointermove", this.#onpointermove);
+        document.addEventListener("pointerup", this.#onpointerup);
         this.#updateEnvironment();
     }
 
@@ -192,9 +197,9 @@ class ShijimaWeb {
         this.#env = null;
         this.#ctx.delete();
         this.#ctx = null;
-        document.removeEventListener("mousemove", this.#onmousemove);
-        this.#onmousemove = null;
-        document.removeEventListener("mouseup", this.#onmouseup);
-        this.#onmouseup = null;
+        document.removeEventListener("pointermove", this.#onpointermove);
+        this.#onpointermove = null;
+        document.removeEventListener("pointerup", this.#onpointerup);
+        this.#onpointerup = null;
     }
 }
